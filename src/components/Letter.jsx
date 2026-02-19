@@ -18,8 +18,8 @@ export default function Letter() {
                 <boxGeometry args={[10, 40, 10]} />
                 <meshStandardMaterial
                     color="#eed9bd" // Matches Sea
-                    roughness={0.6}
-                    metalness={0.4}
+                    roughness={1}
+                    metalness={0}
                 />
             </mesh>
 
@@ -29,8 +29,8 @@ export default function Letter() {
                 <boxGeometry args={[10, 2, 10]} />
                 <meshStandardMaterial
                     color="#eed9bd" // Matches Sea
-                    roughness={0.6}
-                    metalness={0.4}
+                    roughness={1}
+                    metalness={0}
                 />
             </mesh>
         </group>

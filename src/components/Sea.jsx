@@ -18,34 +18,41 @@ export default function Sea() {
     context.fillStyle = '#eed9bd'
     context.fillRect(0, 0, 1024, 1024)
 
-    /* // Grid Lines: Soft Charcoal
-    context.strokeStyle = '#666666'
+    // Add random black ripples (increspature)
+    context.strokeStyle = '#000000'
     context.lineWidth = 2
+    context.lineCap = 'round'
 
-    const step = 64
+    const rippleCount = 60
+    for (let i = 0; i < rippleCount; i++) {
+      const x = Math.random() * 1024
+      const y = Math.random() * 1024
+      const length = 50 + Math.random() * 100 // Longer strokes
+      const thickness = 1 + Math.random() * 2
 
-    // Draw Grid
-    for (let i = 0; i <= 1024; i += step) {
       context.beginPath()
-      context.moveTo(i, 0)
-      context.lineTo(i, 1024)
-      context.stroke()
+      context.save()
+      context.translate(x, y)
+      // Squash vertically to make them look like flat water lines, not bubbles
+      context.scale(1, 0.15)
+      context.rotate(Math.random() * 0.2 - 0.1) // Slight tilt
 
-      context.beginPath()
-      context.moveTo(0, i)
-      context.lineTo(1024, i)
-      context.stroke()
-    } */
+      context.strokeStyle = `rgba(47, 47, 47, ${0.4 + Math.random() * 0.4})` // Graphite
+      context.lineWidth = thickness
 
-    /* // Canvas Border
-    context.lineWidth = 10
-    context.strokeRect(0, 0, 1024, 1024) */
+      // Draw a wide, flat arc
+      context.arc(0, 0, length, Math.PI, 0) // Top half only or bottom half
+
+      context.restore()
+      context.stroke()
+    }
 
     const texture = new THREE.CanvasTexture(canvas)
     texture.wrapS = THREE.RepeatWrapping
     texture.wrapT = THREE.RepeatWrapping
     texture.repeat.set(4, 4)
     texture.anisotropy = 16
+    texture.colorSpace = THREE.SRGBColorSpace // Correct gamma
     return texture
   }, [])
 
@@ -91,6 +98,10 @@ export default function Sea() {
       }
     }
 
+    // Animate Texture Offset for drifting ripples
+    gridTexture.offset.x = time * 0.02
+    gridTexture.offset.y = time * 0.05
+
     pos.needsUpdate = true
     geometry.current.computeVertexNormals()
   })
@@ -105,8 +116,8 @@ export default function Sea() {
         <meshStandardMaterial
           color="#ffffff"
           map={gridTexture}
-          roughness={0.6} // Fully matte
-          metalness={0.4}
+          roughness={1} // Fully matte
+          metalness={0}
           flatShading={false}
           side={THREE.DoubleSide}
         />
