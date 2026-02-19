@@ -1,6 +1,6 @@
 import { Canvas, useFrame } from '@react-three/fiber'
 import { ScrollControls, Scroll, Environment, Float, PerspectiveCamera, useScroll } from '@react-three/drei'
-import { EffectComposer, Noise, Vignette, Outline, Selection, Select } from '@react-three/postprocessing'
+import { EffectComposer, Noise, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { useRef } from 'react'
 import Sea from './components/Sea'
@@ -90,31 +90,26 @@ export default function App() {
         <ambientLight intensity={0.8} />
         <Environment preset="city" environmentIntensity={0.5} />
 
-        <Selection>
-          <EffectComposer autoClear={false} multisampling={8}>
-            <Outline visibleEdgeColor="#000000" hiddenEdgeColor="transparent" blur edgeStrength={100} width={1000} />
-            {/* Noise removed as requested */}
-          </EffectComposer>
+        <ScrollControls pages={3} damping={0.25}>
+          <CameraController />
+          <LightingController />
 
-          <ScrollControls pages={3} damping={0.25}>
-            <CameraController />
-            <LightingController />
+          <Float speed={2} rotationIntensity={0} floatIntensity={0}>
+            <group position={[0, 0, 0]}>
+              <Sea />
+              <Ship />
+              <Letter />
+            </group>
+          </Float>
 
-            <Float speed={2} rotationIntensity={0} floatIntensity={0}>
-              <group position={[0, 0, 0]}>
-                <Sea />
-                <Select enabled>
-                  <Ship />
-                </Select>
-                <Letter />
-              </group>
-            </Float>
+          <Scroll html>
+            <Overlay />
+          </Scroll>
+        </ScrollControls>
 
-            <Scroll html>
-              <Overlay />
-            </Scroll>
-          </ScrollControls>
-        </Selection>
+        <EffectComposer disableNormalPass>
+          {/* Noise removed as requested */}
+        </EffectComposer>
       </Canvas>
     </>
   )
