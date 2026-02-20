@@ -1,65 +1,29 @@
 import { useRef, useMemo, useLayoutEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { useTexture, useScroll } from '@react-three/drei'
 import * as THREE from 'three'
 import { getWaveHeight } from '../utils/wave'
 
 export default function Sea() {
   const mesh = useRef()
   const geometry = useRef()
+  const scroll = useScroll()
 
-  // Antique Paper Grid Texture
-  const gridTexture = useMemo(() => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 1024
-    canvas.height = 1024
-    const context = canvas.getContext('2d')
+  // Load Map Texture from public/map.svg
+  const mapTexture = useTexture('/map.svg')
 
-    // Background: Muted Antique Beige
-    context.fillStyle = '#eed9bd'
-    context.fillRect(0, 0, 1024, 1024)
-
-    // Add random black ripples (increspature)
-    context.strokeStyle = '#000000'
-    context.lineWidth = 2
-    context.lineCap = 'round'
-
-    const rippleCount = 60
-    for (let i = 0; i < rippleCount; i++) {
-      const x = Math.random() * 1024
-      const y = Math.random() * 1024
-      const length = 50 + Math.random() * 100 // Longer strokes
-      const thickness = 1 + Math.random() * 2
-
-      context.beginPath()
-      context.save()
-      context.translate(x, y)
-      // Squash vertically to make them look like flat water lines, not bubbles
-      context.scale(1, 0.15)
-      context.rotate(Math.random() * 0.2 - 0.1) // Slight tilt
-
-      context.strokeStyle = `rgba(47, 47, 47, ${0.4 + Math.random() * 0.4})` // Graphite
-      context.lineWidth = thickness
-
-      // Draw a wide, flat arc
-      context.arc(0, 0, length, Math.PI, 0) // Top half only or bottom half
-
-      context.restore()
-      context.stroke()
-    }
-
-    const texture = new THREE.CanvasTexture(canvas)
-    texture.wrapS = THREE.RepeatWrapping
-    texture.wrapT = THREE.RepeatWrapping
-    texture.repeat.set(4, 4)
-    texture.anisotropy = 16
-    texture.colorSpace = THREE.SRGBColorSpace // Correct gamma
-    return texture
-  }, [])
+  // Configure Texture
+  mapTexture.wrapS = THREE.RepeatWrapping
+  mapTexture.wrapT = THREE.RepeatWrapping
+  mapTexture.repeat.set(0.5, 0.5)
+  mapTexture.colorSpace = THREE.SRGBColorSpace
 
   const width = 10
   const depth = 10
   const thickness = 1.0
   const density = 128
+
+  const accumulatedTime = useRef(0)
 
   // Store initial vertex positions to avoid "drifting" or "stuck" vertices
   const [basePositions, setBasePositions] = useState(null)
@@ -71,12 +35,27 @@ export default function Sea() {
     }
   }, [geometry.current]) // Re-run if geometry changes
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!geometry.current || !basePositions) return
 
     const time = state.clock.getElapsedTime()
     const pos = geometry.current.attributes.position
     const count = pos.count
+
+    // Scene-aware amplitude
+    let amplitude = 1.0
+    if (scroll.offset > 0.5 && scroll.offset <= 0.75) {
+      // Scene 3 transition
+      amplitude = THREE.MathUtils.lerp(1.0, 0.4, (scroll.offset - 0.5) * 4)
+    } else if (scroll.offset > 0.75) {
+      // Scene 4: Very calm
+      amplitude = THREE.MathUtils.lerp(0.4, 0.1, (scroll.offset - 0.75) * 4)
+    }
+
+    // Accumulate time ONLY during voyage (Scene 2 & 3)
+    if (scroll.offset > 0.25 && scroll.offset < 0.75) {
+      accumulatedTime.current += delta
+    }
 
     for (let i = 0; i < count; i++) {
       // Read from STABLE base positions
@@ -86,21 +65,16 @@ export default function Sea() {
 
       // Check if vertex is on the Top Face (Local Z > 0) based on INITIAL position
       if (z > 0.4) {
-        // Match original wave math:
-        // Box rotated -90deg X:
-        // Local X -> World X
-        // Local Y -> World -Z (Depth)
-
-        const wave = getWaveHeight(x, -y, time)
+        const wave = getWaveHeight(x, -y, time) * amplitude
 
         // Apply to the Z coordinate (Thickness/Up in Local space)
         pos.setZ(i, z + wave)
       }
     }
 
-    // Animate Texture Offset for drifting ripples
-    gridTexture.offset.x = time * 0.02
-    gridTexture.offset.y = time * 0.05
+    // Animate Map Texture Offset (Scrolling effect)
+    // Only uses accumulated time (Scene 2 & 3)
+    mapTexture.offset.y = accumulatedTime.current * 0.01
 
     pos.needsUpdate = true
     geometry.current.computeVertexNormals()
@@ -112,15 +86,29 @@ export default function Sea() {
         {/* Width=10, Height=10 (Depth), Depth=1 (Thickness). Segments matching Original Plane */}
         <boxGeometry ref={geometry} args={[width, depth, thickness, density, density, 1]} />
 
-        {/* Matte Paper Material */}
+        {/* 0: Right (+x) */}
+        <meshStandardMaterial attach="material-0" color="#eed9bd" roughness={1} metalness={0} side={THREE.DoubleSide} />
+        {/* 1: Left (-x) */}
+        <meshStandardMaterial attach="material-1" color="#eed9bd" roughness={1} metalness={0} side={THREE.DoubleSide} />
+        {/* 2: Top (+y) - Actually Side in rotated space */}
+        <meshStandardMaterial attach="material-2" color="#eed9bd" roughness={1} metalness={0} side={THREE.DoubleSide} />
+        {/* 3: Bottom (-y) - Actually Side in rotated space */}
+        <meshStandardMaterial attach="material-3" color="#eed9bd" roughness={1} metalness={0} side={THREE.DoubleSide} />
+
+        {/* 4: Front (+z) - THE WAVE SURFACE */}
         <meshStandardMaterial
-          color="#ffffff"
-          map={gridTexture}
-          roughness={1} // Fully matte
+          attach="material-4"
+          color="#eed9bd"
+          emissive="#eed9bd"
+          emissiveIntensity={0.25}
+          map={mapTexture}
+          roughness={1}
           metalness={0}
-          flatShading={false}
           side={THREE.DoubleSide}
         />
+
+        {/* 5: Back (-z) - Bottom of sea block */}
+        <meshStandardMaterial attach="material-5" color="#eed9bd" roughness={1} metalness={0} side={THREE.DoubleSide} />
       </mesh>
     </group>
   )
