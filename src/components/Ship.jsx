@@ -28,12 +28,17 @@ export default function Ship() {
 
         const t = state.clock.getElapsedTime()
 
-        // Scene-aware amplitude
+        // Scene-aware amplitude: CONTIGUOUS transitions
         let amplitude = 1.0
-        if (scroll.offset > 0.5 && scroll.offset <= 0.75) {
-            amplitude = THREE.MathUtils.lerp(1.0, 0.4, (scroll.offset - 0.5) * 4)
-        } else if (scroll.offset > 0.75) {
-            amplitude = THREE.MathUtils.lerp(0.4, 0.1, (scroll.offset - 0.75) * 4)
+        // S3 transition to calm (0.65 - 0.75)
+        if (scroll.offset > 0.65 && scroll.offset <= 0.75) {
+            const p = (scroll.offset - 0.65) / 0.1
+            amplitude = THREE.MathUtils.lerp(1.0, 0.4, p)
+        }
+        // S4 arrival (0.75 - 0.9)
+        else if (scroll.offset > 0.75) {
+            const p = THREE.MathUtils.clamp((scroll.offset - 0.75) / 0.15, 0, 1)
+            amplitude = THREE.MathUtils.lerp(0.4, 0.1, p)
         }
 
         const x = ref.current.position.x
@@ -59,10 +64,18 @@ export default function Ship() {
 
         // Target Y: Ride ON the wave (h) with offset
         // In Scene 4, raise the offset to match the higher island bridge
-        // Scene Factors for 5-page scroll (0.2 increments)
-        const lockFactor = scroll.offset < 0.2 ? 0 : THREE.MathUtils.smoothstep(scroll.offset, 0.2, 0.6)
-        const turnFactor = scroll.offset > 0.6 ? THREE.MathUtils.smoothstep(scroll.offset, 0.6, 0.7) : 0
-        const dockingFactor = scroll.offset > 0.6 ? Math.min((scroll.offset - 0.6) * 5, 1) : 0
+        // Scena 1 ends at 0.2. Locked movement finishes by start of S3 (0.35)
+        const lockFactor = scroll.offset < 0.35
+            ? THREE.MathUtils.smoothstep(scroll.offset, 0.0, 0.35)
+            : 1
+
+        const turnFactor = scroll.offset > 0.75
+            ? THREE.MathUtils.smoothstep(scroll.offset, 0.75, 0.88)
+            : 0
+
+        const dockingFactor = scroll.offset > 0.75
+            ? THREE.MathUtils.clamp((scroll.offset - 0.75) / 0.12, 0, 1)
+            : 0
 
         // Target Y: Ride ON the wave (h) with offset
         // In Scene 4, raise the offset to match the higher island bridge
@@ -81,9 +94,9 @@ export default function Ship() {
         const targetYaw = 0 // North
         let yaw = THREE.MathUtils.lerp(wander, targetYaw, lockFactor)
 
-        if (scroll.offset > 0.6) {
+        if (scroll.offset > 0.75) {
             // Stop wandering and dock facing East (Math.PI / 2)
-            // TURN FIRST (0.6 - 0.7)
+            // TURN FIRST during S4
             yaw = THREE.MathUtils.lerp(yaw, Math.PI / 2, turnFactor)
         }
 
@@ -92,8 +105,8 @@ export default function Ship() {
         let targetX = THREE.MathUtils.lerp(3, 0, lockFactor)
         let targetZ = THREE.MathUtils.lerp(3, 0, lockFactor)
 
-        if (scroll.offset > 0.6) {
-            // S4: (0,0) -> (-1.0, 1.2) [Dock at North bridge]
+        if (scroll.offset > 0.75) {
+            // S4 Arrival: (0,0) -> (-1.0, 1.2) [Dock at North bridge]
             targetX = THREE.MathUtils.lerp(0, -1.0, dockingFactor)
             targetZ = THREE.MathUtils.lerp(0, 1.2, dockingFactor)
         }
@@ -103,14 +116,14 @@ export default function Ship() {
         ref.current.rotation.y = yaw
     })
 
-    // Balanced palette: Warm wood hull and Cream sails
+    // Lighter Yellow palette for a "clean paper" look
     const hullMaterial = useMemo(() => new THREE.MeshStandardMaterial({
-        color: '#a67c52', // Warm wood
+        color: '#fefae0', // Lighter yellowish off-white
         roughness: 0.8,
     }), [])
 
     const sailMaterial = useMemo(() => new THREE.MeshStandardMaterial({
-        color: '#fff9e5', // Creamy paper (not pure white)
+        color: '#fefae0', // Matching lighter yellow
         roughness: 0.8,
     }), [])
 

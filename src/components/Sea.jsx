@@ -42,39 +42,35 @@ export default function Sea() {
     const pos = geometry.current.attributes.position
     const count = pos.count
 
-    // Scene-aware amplitude
+    // Scene-aware amplitude: CONTIGUOUS transitions
     let amplitude = 1.0
-    if (scroll.offset > 0.5 && scroll.offset <= 0.75) {
-      // Scene 3 transition
-      amplitude = THREE.MathUtils.lerp(1.0, 0.4, (scroll.offset - 0.5) * 4)
-    } else if (scroll.offset > 0.75) {
-      // Scene 4: Very calm
-      amplitude = THREE.MathUtils.lerp(0.4, 0.1, (scroll.offset - 0.75) * 4)
+    // Transition to calm starts in Scene 4 (0.75)
+    if (scroll.offset > 0.75 && scroll.offset <= 0.9) {
+      const p = (scroll.offset - 0.75) / 0.15
+      amplitude = THREE.MathUtils.lerp(1.0, 0.1, p)
+    } else if (scroll.offset > 0.9) {
+      amplitude = 0.1
     }
 
-    // Accumulate time ONLY during voyage (Scene 2 & 3)
-    if (scroll.offset > 0.25 && scroll.offset < 0.75) {
+    // Move ONLY during voyage (Scene 2 & 3: 0.2 - 0.75)
+    if (scroll.offset > 0.2 && scroll.offset < 0.75) {
       accumulatedTime.current += delta
     }
 
     for (let i = 0; i < count; i++) {
-      // Read from STABLE base positions
+      // ... (Vertex animation remains same)
       const x = basePositions[i * 3]
       const y = basePositions[i * 3 + 1]
       const z = basePositions[i * 3 + 2]
 
-      // Check if vertex is on the Top Face (Local Z > 0) based on INITIAL position
       if (z > 0.4) {
         const wave = getWaveHeight(x, -y, time) * amplitude
-
-        // Apply to the Z coordinate (Thickness/Up in Local space)
         pos.setZ(i, z + wave)
       }
     }
 
-    // Animate Map Texture Offset (Scrolling effect)
-    // Only uses accumulated time (Scene 2 & 3)
-    mapTexture.offset.y = accumulatedTime.current * 0.01
+    // Moderated speed multiplier
+    mapTexture.offset.y = accumulatedTime.current * 0.4
 
     pos.needsUpdate = true
     geometry.current.computeVertexNormals()

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { useGLTF } from '@react-three/drei'
+import { useGLTF, Edges } from '@react-three/drei'
 import * as THREE from 'three'
 
 export default function FlagPart({ material, ...props }) {
@@ -14,7 +14,9 @@ export default function FlagPart({ material, ...props }) {
 
   return (
     <group {...props} dispose={null}>
-      <mesh geometry={nodes['flag-high-pennant_1'].geometry} material={activeMaterial} castShadow receiveShadow />
+      <mesh geometry={nodes['flag-high-pennant_1'].geometry} material={activeMaterial} castShadow receiveShadow>
+        <Edges color="#000000" threshold={15} />
+      </mesh>
     </group>
   )
 }
