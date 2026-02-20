@@ -114,6 +114,28 @@ export default function Ship() {
         ref.current.position.x = THREE.MathUtils.lerp(ref.current.position.x, targetX, positionDamping)
         ref.current.position.z = THREE.MathUtils.lerp(ref.current.position.z, targetZ, positionDamping)
         ref.current.rotation.y = yaw
+
+        // --- FINAL REVEAL FADE-OUT ---
+        // Fade out perfectly during Phase 5b (0.94 - 0.97)
+        const finalFade = THREE.MathUtils.smoothstep(scroll.offset, 0.94, 0.95)
+        const opacity = Math.max(0, 1 - finalFade)
+
+        hullMaterial.opacity = opacity
+        hullMaterial.transparent = opacity < 1
+        hullMaterial.depthWrite = opacity > 0.5
+        hullMaterial.visible = opacity > 0
+
+        sailMaterial.opacity = opacity
+        sailMaterial.transparent = opacity < 1
+        sailMaterial.depthWrite = opacity > 0.5
+        sailMaterial.visible = opacity > 0
+
+        paperMaterial.opacity = opacity
+        paperMaterial.transparent = opacity < 1
+        paperMaterial.depthWrite = opacity > 0.5
+        paperMaterial.visible = opacity > 0
+
+        if (ref.current) ref.current.visible = opacity > 0
     })
 
     // Lighter Yellow palette for a "clean paper" look

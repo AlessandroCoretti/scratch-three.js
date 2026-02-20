@@ -38,18 +38,28 @@ function CameraController() {
       y = 15
       z = -35
     } else if (t < 0.9) {
-      // PHASE 4 (0.75 - 0.9): TO ISLAND SIDE
+      // PHASE 4 (0.75 - 0.9): SIDE APPROACH TO ISLAND (View from West)
       const p = (t - 0.75) / 0.15
       x = THREE.MathUtils.lerp(0, -25, p)
       y = THREE.MathUtils.lerp(15, 15, p)
       z = THREE.MathUtils.lerp(-35, 10, p)
     } else {
-      // PHASE 5 (0.9 - 1.0): LETTER REVEAL ZOOM OUT
-      const p = (t - 0.9) / 0.1
-      x = THREE.MathUtils.lerp(-25, 80, p)
-      y = THREE.MathUtils.lerp(15, 40, p)
-      z = THREE.MathUtils.lerp(10, 80, p)
-      lookAtTarget.y = THREE.MathUtils.lerp(0, -20, p)
+      // PHASE 5 (0.9 - 1.0): SOUTH ROTATION + DRAMATIC ZOOM OUT
+      if (t < 0.94) {
+        // Sub-phase 5a: Rotate from West to South
+        const p = (t - 0.9) / 0.04
+        x = THREE.MathUtils.lerp(-25, 0, p)
+        y = THREE.MathUtils.lerp(15, 25, p)
+        z = THREE.MathUtils.lerp(10, 70, p)
+      } else {
+        // Sub-phase 5b: Zoom straight out from the South point while DESCENDING
+        const p = (t - 0.94) / 0.06
+        x = 0
+        y = THREE.MathUtils.lerp(25, 2, p) // Descend to frontal height (adjust to 2 for eye-level)
+        z = THREE.MathUtils.lerp(70, 140, p) // Pull away moderately (not too far)
+      }
+      // Look at the letter/horizon level as we pull away
+      lookAtTarget.y = THREE.MathUtils.lerp(0, 0, (t - 0.9) / 0.1)
     }
 
     state.camera.position.lerp(vec.set(x, y, z), 0.1)
@@ -93,6 +103,13 @@ function LightingController() {
       z = 70
       sunScale = 1
       targetIntensity.val = 0.8
+
+      // FINAL FADE-OUT IN S5b (0.94 - 0.97)
+      if (t > 0.94) {
+        const fade = THREE.MathUtils.smoothstep(t, 0.94, 0.95)
+        sunScale = 1.0 - fade
+        targetIntensity.val = THREE.MathUtils.lerp(0.8, 0, fade)
+      }
     }
 
     vec.set(x, y, z)
@@ -131,8 +148,8 @@ function FogController() {
     const t = scroll.offset
 
     // SCROLL-CONTROLLED CLEARING:
-    // Fog starts getting thinner at 0.45 and is fully clear by 0.7
-    const p = THREE.MathUtils.smoothstep(t, 0.45, 0.7)
+    // Fog starts getting thinner at 0.35 and is fully clear by 0.55
+    const p = THREE.MathUtils.smoothstep(t, 0.35, 0.55)
 
     // Smoothly shift fog between dense and clear based on S3 scroll
     fogRef.current.near = THREE.MathUtils.lerp(10, 20, p)
@@ -151,9 +168,9 @@ function MovingClouds() {
     const t = scroll.offset
 
     // SCROLL-CONTROLLED PARTING:
-    // Start parting at 0.45, fully open and faded by 0.75
+    // Start parting at 0.35, fully open and faded by 0.6
     // Using smoothstep for a premium, non-linear feel
-    const p = THREE.MathUtils.smoothstep(t, 0.45, 0.75)
+    const p = THREE.MathUtils.smoothstep(t, 0.35, 0.6)
 
     // 1. DISSOLVE EFFECT: Linked to scroll progress
     const opacity = THREE.MathUtils.clamp((1 - p) * 0.4, 0, 0.4)

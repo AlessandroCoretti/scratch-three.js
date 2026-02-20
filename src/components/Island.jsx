@@ -9,11 +9,13 @@ Title: Low Poly Medieval Island
 */
 
 import React, { useMemo, forwardRef } from 'react'
-import { useGLTF, Edges } from '@react-three/drei'
+import { useGLTF, Edges, useScroll } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 const Island = forwardRef(({ material, ...props }, ref) => {
   const { nodes } = useGLTF('/models/low_poly_medieval_island-transformed.glb')
+  const scroll = useScroll()
 
   // Unified Lighter Yellow Palette
   const palette = useMemo(() => ({
@@ -26,6 +28,20 @@ const Island = forwardRef(({ material, ...props }, ref) => {
     plaster: new THREE.MeshStandardMaterial({ color: '#fefae0', roughness: 0.9 }),
     pavement: new THREE.MeshStandardMaterial({ color: '#fefae0', roughness: 0.9 }),
   }), [])
+
+  useFrame(() => {
+    // --- FINAL REVEAL FADE-OUT ---
+    const finalFade = THREE.MathUtils.smoothstep(scroll.offset, 0.94, 0.97)
+    const opacity = Math.max(0, 1 - finalFade)
+
+    Object.values(palette).forEach((mat) => {
+      mat.opacity = opacity
+      mat.transparent = opacity < 1
+      mat.depthWrite = opacity > 0.5
+    })
+
+    if (ref.current) ref.current.visible = opacity > 0
+  })
 
   return (
     <group ref={ref} {...props} dispose={null}>

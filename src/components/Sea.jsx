@@ -74,6 +74,29 @@ export default function Sea() {
 
     pos.needsUpdate = true
     geometry.current.computeVertexNormals()
+
+    // --- FINAL REVEAL FADE-OUT ---
+    const finalFade = THREE.MathUtils.smoothstep(scroll.offset, 0.94, 0.97)
+    const opacity = Math.max(0, 1 - finalFade)
+
+    // Apply to ALL materials in the sea block
+    mesh.current.traverse((child) => {
+      if (child.material) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach(m => {
+            m.opacity = opacity
+            m.transparent = opacity < 1
+            m.depthWrite = opacity > 0.5
+          })
+        } else {
+          child.material.opacity = opacity
+          child.material.transparent = opacity < 1
+          child.material.depthWrite = opacity > 0.5
+        }
+      }
+    })
+
+    mesh.current.visible = opacity > 0
   })
 
   return (
